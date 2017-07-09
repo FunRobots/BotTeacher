@@ -79,7 +79,7 @@ def main():
                 #product presentation
                 #Consultant must make product presentation
 
-
+    log.close()
     print('Repeat?')
     speech_text = recognize_speech()
     if speech_text.strip().startswith('да'):
