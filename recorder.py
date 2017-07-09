@@ -38,7 +38,7 @@ class Recorder:
             self.input_device = pyaudio_config['input_device']
 
             self.audio = pyaudio.PyAudio()
-            self.stream = self.audio.open(format=self.format, channels=self.channels, rate=self.rate, input=True, input_device_index=self.input_device, frames_per_buffer=self.chunk_size)
+            self.stream = self.audio.open(format=self.format, channels=self.channels, rate=self.rate, input=True, frames_per_buffer=self.chunk_size)
             self.stream.start_stream()
         except Exception as e:
             ErrorLogger(__file__, e)
