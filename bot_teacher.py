@@ -15,30 +15,75 @@ rec = Recorder(pyaudio_config)
 speech_recognizer = SpeechRecognizer(yandex_voice_key=yandex_voice_key)
 bot = APIAIBot(client_key=apiai_bot_client_key)
 
-def request():
+def speech_recognize():
     speech_audio = rec.listen_audio()
     speech_text = speech_recognizer.recognize_speech(speech_audio)
-    bot_answer = bot.request(speech_text)
-    request bot_answer
+    return speech_text
 
 def main():
 
+    log = open(time.ctime() + '.log', w)
+
     #welcome
-    bot_answer = request()
+    speech_text = recognize_speech()
+    bot_answer = bot.request(speech_text)
     if bot_answer['intent_name'] == '1. Welcome':
+        print('Consultant > ', speech_text)
+        print('Client > ', bot_answer['text'])
+
+        log.write('[{0}] \n Intent: {1} \n Consultant > {2} \n Client > {3}'.format(time.ctime(), bot_answer['intent_name'], speech_text, bot_answer['text']))
+
         if bot_answer['text'] == 'Добрый день' or bot_answer['text'] == 'Доброе утро' or bot_answer['text'] == 'Добрый вечер' or bot_answer['text'] == 'Здравствуйте':
-            #approach
-            bot_answer = request()
-            if bot_answer['intent_name'] == '2-Approach':
-                #listen to consultor and notify the time
-                pass
+
+            #listen to consultor and notify the time
+            speech_text = str()
+            start = time.time()
+            while len(speech_text) == 0 and time.time() - start < 90:
+                speech_text = recognize_speech()
+                time.sleep(1)
+
+            pause = time.time() - start
+
+            if pause < 30:
+                #approach-decision-leave
+                bot_answer = bot.request('goodbye')
+                print('Consultant > ', speech_text)
+                print('Client > ', bot_answer['text'])
+                log.write('[{0}] \n Intent: {1} \n Consultant > {2} \n Client > {3}'.format(time.ctime(), bot_answer['intent_name'], speech_text, bot_answer['text']))
+            elif pause < 90:
+                #approach
+                bot_answer = bot.request(speech_text)
+                if bot_answer['intent_name'] == '2-Approach':
+                    print('Consultant > ', speech_text)
+                    #approach-decision-continue
+                    bot_answer = bot.request('continue')
+                    print('Client > ', bot_answer['text'])
+                    log.write('[{0}] \n Intent: {1} \n Consultant > {2} \n Client > {3}'.format(time.ctime(), bot_answer['intent_name'], speech_text, bot_answer['text']))
+                    #product presentation
+
+            else:
+                print('Client gone!')
+
 
         elif bot_answer['text'] == 'Здравствуйте! Я ищу утюг, который бы автоматически отключался, если его не выключили':
+            print('Consultant > ', speech_text)
+            print('Client > ', bot_answer['text'])
+            log.write('[{0}] \n Intent: {1} \n Consultant > {2} \n Client > {3}'.format(time.ctime(), bot_answer['intent_name'], speech_text, bot_answer['text']))
             #needs-detection
-            bot_answer = request()
+            speech_text = speech_recognize()
+            bot_answer = bot.request(speech_text)
             if bot_answer['intent_name'] == '3-Needs-detection':
+                print('Consultant > ', speech_text)
+                print('Client > ', bot_answer['text'])
+                log.write('[{0}] \n Intent: {1} \n Consultant > {2} \n Client > {3}'.format(time.ctime(), bot_answer['intent_name'], speech_text, bot_answer['text']))
                 #product presentation
-                pass
+                #Consultant must make product presentation
+
+
+    print('Repeat?')
+    speech_text = recognize_speech()
+    if speech_text.strip().startswith('да'):
+        main()
 
 if __name__ == '__main__':
     main()
