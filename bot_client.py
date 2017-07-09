@@ -88,6 +88,7 @@ class APIAIBot:
             answer = dict()
             #extract bot answer
             answer['text'] = intent['result']['fulfillment']['speech']
+            answer['intent_name'] = intent['result']['metadata']['intentName']
             answer['action'] = dict()
             answer['action']['name'] = str()
             answer['action']['parameters'] = str()

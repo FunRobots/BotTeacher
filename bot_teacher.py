@@ -17,4 +17,7 @@ if __name__ == '__main__':
     speech_recognizer = SpeechRecognizer(yandex_voice_key=yandex_voice_key)
     bot = APIAIBot(client_key=apiai_bot_client_key)
 
+    welcome_was = False
+    current_intent = '1. Welcome'
+
     
