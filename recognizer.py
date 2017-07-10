@@ -59,6 +59,7 @@ class SpeechRecognizer:
                     'Content-Type': 'audio/x-wav'
             })
 
+            print(r.text)
             root = ET.fromstring(r.text)
             max_conf = 0
             result = None

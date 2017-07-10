@@ -5,14 +5,7 @@ import random
 import json
 from typing import Dict
 
-import logging
-import os
-LOG_FOLDER = 'logs'
-if os.path.exists(LOG_FOLDER) is False:
-    os.mkdir(LOG_FOLDER)
-
-logging.basicConfig(filename=LOG_FOLDER + '/' + __name__ + '.log', format='[%(asctime)s] %(message)s\n\n',
-                    level=logging.DEBUG)
+from utils import ErrorLogger
 
 
 class APIAIBot:
@@ -69,7 +62,7 @@ class APIAIBot:
 
             return self._parse_intent(response)
         except Exception as e:
-            logging.error(str(e))
+            ErrorLogger(__file__, e)
             return None
 
     def _parse_intent(self, intent: Dict) -> Dict:
@@ -99,5 +92,5 @@ class APIAIBot:
 
             return answer
         except Exception as e:
-            logging.error(str(e))
+            ErrorLogger(__file__, e)
             return None

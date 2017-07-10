@@ -3,31 +3,32 @@ from recognizer import SpeechRecognizer
 from bot_client import APIAIBot
 import json
 import time
+import audio_format_converter
 
 #read config
-config = json.load('config.conf')
+config = json.load(open('config.conf','r'))
 yandex_voice_key = config['yandex_voice_key']
 apiai_bot_client_key = config['apiai_bot_client_key']
 pyaudio_config = config['pyaudio']
 
 #create objects
-rec = Recorder(pyaudio_config)
+rec = Recorder(pyaudio_config, min_rms=1000)
 speech_recognizer = SpeechRecognizer(yandex_voice_key=yandex_voice_key)
 bot = APIAIBot(client_key=apiai_bot_client_key)
 
-def speech_recognize():
+def recognize_speech():
     speech_audio = rec.listen_audio()
-    speech_text = speech_recognizer.recognize_speech(speech_audio)
+    speech_text = speech_recognizer.recognize_speech(audio_format_converter.raw_audio2wav(speech_audio, pyaudio_config))
     return speech_text
 
 def main():
 
-    log = open(time.ctime() + '.log', w)
-
+    log = open('stat/' + time.ctime() + '.log', 'w')
+    print('listen...\n')
     #welcome
     speech_text = recognize_speech()
     bot_answer = bot.request(speech_text)
-    if bot_answer['intent_name'] == '1. Welcome':
+    if bot_answer['intent_name'] == '1.Welcome':
         print('Consultant > ', speech_text)
         print('Client > ', bot_answer['text'])
 
@@ -70,7 +71,8 @@ def main():
             print('Client > ', bot_answer['text'])
             log.write('[{0}] \n Intent: {1} \n Consultant > {2} \n Client > {3}'.format(time.ctime(), bot_answer['intent_name'], speech_text, bot_answer['text']))
             #needs-detection
-            speech_text = speech_recognize()
+            print('listen...\n')
+            speech_text = recognize_speech()
             bot_answer = bot.request(speech_text)
             if bot_answer['intent_name'] == '3-Needs-detection':
                 print('Consultant > ', speech_text)

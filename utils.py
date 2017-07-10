@@ -1,5 +1,5 @@
 from pathlib import Path
-top = Path(__file__).resolve().parents[2].as_posix()
+top = Path(__file__).resolve().parents[0].as_posix()
 
 import logging
 import os
