@@ -5,6 +5,8 @@ import json
 import time
 import audio_format_converter
 
+from utils import ErrorLogger
+
 #read config
 config = json.load(open('config.conf','r'))
 yandex_voice_key = config['yandex_voice_key']
@@ -26,66 +28,67 @@ def main():
     log = open('stat/' + time.ctime() + '.log', 'w')
     print('listen...\n')
     #welcome
-    speech_text = recognize_speech()
-    bot_answer = bot.request(speech_text)
-    if bot_answer['intent_name'] == '1.Welcome':
-        print('Consultant > ', speech_text)
-        print('Client > ', bot_answer['text'])
+    try:
+        speech_text = recognize_speech()
+        bot_answer = bot.request(speech_text)
+        if bot_answer['intent_name'] == '1.Welcome':
+            print('Consultant > ', speech_text)
+            print('Client > ', bot_answer['text'])
 
-        log.write('[{0}] \n Intent: {1} \n Consultant > {2} \n Client > {3}'.format(time.ctime(), bot_answer['intent_name'], speech_text, bot_answer['text']))
+            log.write('[{0}] \n Intent: {1} \n Consultant > {2} \n Client > {3}'.format(time.ctime(), bot_answer['intent_name'], speech_text, bot_answer['text']))
 
-        if bot_answer['text'] == 'Добрый день' or bot_answer['text'] == 'Доброе утро' or bot_answer['text'] == 'Добрый вечер' or bot_answer['text'] == 'Здравствуйте':
+            if bot_answer['text'] == 'Добрый день' or bot_answer['text'] == 'Доброе утро' or bot_answer['text'] == 'Добрый вечер' or bot_answer['text'] == 'Здравствуйте':
 
-            #listen to consultor and notify the time
-            speech_text = str()
-            start = time.time()
-            while len(speech_text) == 0 and time.time() - start < 90:
+                #listen to consultor and notify the time
+                speech_text = str()
+                start = time.time()
                 speech_text = recognize_speech()
-                time.sleep(1)
+                pause = time.time() - start
 
-            pause = time.time() - start
+                if pause < 30:
+                    #approach-decision-leave
+                    bot_answer = bot.request('goodbye')
+                    print('Consultant > ', speech_text)
+                    print('Client > ', bot_answer['text'])
+                    log.write('[{0}] \n Intent: {1} \n Consultant > {2} \n Client > {3}'.format(time.ctime(), bot_answer['intent_name'], speech_text, bot_answer['text']))
+                elif pause < 90:
+                    #approach
+                    bot_answer = bot.request(speech_text)
+                    if bot_answer['intent_name'] == '2-Approach':
+                        print('Consultant > ', speech_text)
+                        #approach-decision-continue
+                        bot_answer = bot.request('continue')
+                        print('Client > ', bot_answer['text'])
+                        log.write('[{0}] \n Intent: {1} \n Consultant > {2} \n Client > {3}'.format(time.ctime(), bot_answer['intent_name'], speech_text, bot_answer['text']))
+                        #product presentation
 
-            if pause < 30:
-                #approach-decision-leave
-                bot_answer = bot.request('goodbye')
+                else:
+                    print('Client gone!')
+
+
+            elif bot_answer['text'] == 'Здравствуйте! Я ищу утюг, который бы автоматически отключался, если его не выключили':
                 print('Consultant > ', speech_text)
                 print('Client > ', bot_answer['text'])
                 log.write('[{0}] \n Intent: {1} \n Consultant > {2} \n Client > {3}'.format(time.ctime(), bot_answer['intent_name'], speech_text, bot_answer['text']))
-            elif pause < 90:
-                #approach
+                #needs-detection
+                print('listen...\n')
+                speech_text = recognize_speech()
                 bot_answer = bot.request(speech_text)
-                if bot_answer['intent_name'] == '2-Approach':
+                if bot_answer['intent_name'] == '3-Needs-detection':
                     print('Consultant > ', speech_text)
-                    #approach-decision-continue
-                    bot_answer = bot.request('continue')
                     print('Client > ', bot_answer['text'])
                     log.write('[{0}] \n Intent: {1} \n Consultant > {2} \n Client > {3}'.format(time.ctime(), bot_answer['intent_name'], speech_text, bot_answer['text']))
                     #product presentation
+                    #Consultant must make product presentation
 
-            else:
-                print('Client gone!')
+        log.close()
+        print('Repeat?')
+        speech_text = recognize_speech()
+        if speech_text is not None and speech_text.strip().startswith('да'):
+            main()
 
-
-        elif bot_answer['text'] == 'Здравствуйте! Я ищу утюг, который бы автоматически отключался, если его не выключили':
-            print('Consultant > ', speech_text)
-            print('Client > ', bot_answer['text'])
-            log.write('[{0}] \n Intent: {1} \n Consultant > {2} \n Client > {3}'.format(time.ctime(), bot_answer['intent_name'], speech_text, bot_answer['text']))
-            #needs-detection
-            print('listen...\n')
-            speech_text = recognize_speech()
-            bot_answer = bot.request(speech_text)
-            if bot_answer['intent_name'] == '3-Needs-detection':
-                print('Consultant > ', speech_text)
-                print('Client > ', bot_answer['text'])
-                log.write('[{0}] \n Intent: {1} \n Consultant > {2} \n Client > {3}'.format(time.ctime(), bot_answer['intent_name'], speech_text, bot_answer['text']))
-                #product presentation
-                #Consultant must make product presentation
-
-    log.close()
-    print('Repeat?')
-    speech_text = recognize_speech()
-    if speech_text.strip().startswith('да'):
-        main()
+    except Exception as e:
+        ErrorLogger(__file__, e)
 
 if __name__ == '__main__':
     main()
