@@ -14,7 +14,7 @@ apiai_bot_client_key = config['apiai_bot_client_key']
 pyaudio_config = config['pyaudio']
 
 #create objects
-rec = Recorder(pyaudio_config, min_rms=1000)
+rec = Recorder(pyaudio_config, min_rms=100)
 speech_recognizer = SpeechRecognizer(yandex_voice_key=yandex_voice_key)
 bot = APIAIBot(client_key=apiai_bot_client_key)
 
