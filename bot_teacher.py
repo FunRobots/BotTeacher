@@ -42,7 +42,11 @@ def main():
                 #listen to consultor and notify the time
                 speech_text = str()
                 start = time.time()
-                speech_text = recognize_speech()
+                while time.time() - start < 90:
+                    speech_text = recognize_speech()
+                    if speech_text is not None and len(speech_text) > 0:
+                        break
+                
                 pause = time.time() - start
 
                 if pause < 30:
