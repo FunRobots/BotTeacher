@@ -57,11 +57,13 @@ class APIAIBot:
             req = self._ai.text_request()
             req.lang = 'ru'
             req.session_id = self.session_id
-            req.query = msg
+            req.query = msg if isinstance(msg, str) else str()
             response = json.loads(req.getresponse().read().decode('utf-8'))
+            #print('api.ai response: ', response)
 
             return self._parse_intent(response)
         except Exception as e:
+            #print('...!!! with error!!!')
             ErrorLogger(__file__, e)
             return None
 
