@@ -25,12 +25,16 @@ def recognize_speech():
 
 #bad speech recognition client phrase
 BAD_SPEECH_RECOGNITION = 'Повторите, пожалуйста, еще раз. Плохо слышно'
-APPROACH_STATUS = None
+WELCOME_STATUS = False
+APPROACH_STATUS = False
+NEEDS_DETECTION_STATUS = False
 #----------------------------------------------------------------
 log = None
 
 def welcome():
     global log
+    global WELCOME_STATUS
+    
     print('listen...\n')
     speech_text = recognize_speech()
     bot_answer = bot.request(speech_text)
@@ -44,11 +48,13 @@ def welcome():
 ##            approach()
 ##        elif bot_answer['text'] == 'Здравствуйте! Я ищу утюг, который бы автоматически отключался, если его не выключили':
 ##            needs_detection()
+        WELCOME_STATUS = True
         return True
     
     else:
 ##        print(BAD_SPEECH_RECOGNITION)
 ##        welcome()
+        WELCOME_STATUS = False
         return False
 
 def approach():
@@ -102,6 +108,8 @@ def approach():
 
 def needs_detection():
     global log
+    global NEEDS_DETECTION_STATUS
+    
     print('listen...\n')
     speech_text = recognize_speech()
     bot_answer = bot.request(speech_text)
@@ -112,11 +120,13 @@ def needs_detection():
         #product presentation
         #NEED FOR PRODUCT PRESENTATION SCENARIO
 
+        NEEDS_DETECTION_STATUS = True
         return True
 
     else:
         print(BAD_SPEECH_RECOGNITION)
 ##        needs_detection()
+        NEEDS_DETECTION_STATUS = False
         return False
 #----------------------------------------------------------------
 
@@ -125,14 +135,14 @@ def main():
     log = open('stat/' + time.ctime() + '.log', 'w')
     
     try:
-        while welcome() is  False:
+        while WELCOME_STATUS is  False:
             welcome()
 
-        while approach() is False:
+        while APPROACH_STATUS is False:
             approach()
 
         if APPROACH_STATUS is True:
-            while needs_detection() is False:
+            while NEEDS_DETECTION_STATUS is False:
                 needs_detection()
         elif APPROACH_STATUS is None:
             pass
