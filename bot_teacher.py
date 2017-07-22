@@ -52,7 +52,7 @@ def welcome():
         return True
     
     else:
-##        print(BAD_SPEECH_RECOGNITION)
+        print(BAD_SPEECH_RECOGNITION)
 ##        welcome()
         WELCOME_STATUS = False
         return False
