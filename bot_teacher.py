@@ -4,6 +4,7 @@ from bot_client import APIAIBot
 import json
 import time
 import audio_format_converter
+import os
 
 from utils import ErrorLogger
 
@@ -28,6 +29,8 @@ BAD_SPEECH_RECOGNITION = 'Повторите, пожалуйста, еще ра�
 WELCOME_STATUS = False
 APPROACH_STATUS = False
 NEEDS_DETECTION_STATUS = False
+
+STAT_FOLDER = 'stat'
 #----------------------------------------------------------------
 log = None
 
@@ -131,7 +134,11 @@ def needs_detection():
 #----------------------------------------------------------------
 
 def main():
-    global log    
+    global log
+    global STAT_FOLDER
+    
+    if os.path.exists(STAT_FOLDER) is False:
+        os.mkdir(STAT_FOLDER)
     log = open('stat/' + time.ctime() + '.log', 'w')
     
     try:
