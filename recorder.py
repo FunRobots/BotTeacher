@@ -65,7 +65,7 @@ class Recorder:
             buf = last_chunk
             silence_start = time.time()
             while (time.time() - silence_start) < 1.2:
-                chunk = self.stream.read(self.chunk_size)
+                chunk = self.stream.read(self.chunk_size, exception_on_overflow=False)
                 if audioop.rms(chunk, 2) >= self.min_rms / 3 :
                     buf += chunk
                 if audioop.rms(chunk, 2) >= self.min_rms:
@@ -81,7 +81,7 @@ class Recorder:
         '''
         try:
             while True:
-                chunk = self.stream.read(self.chunk_size)
+                chunk = self.stream.read(self.chunk_size, exception_on_overflow=False)
                 #if sound detected record raw data until silence
                 if audioop.rms(chunk, 2) >=  self.min_rms:
                     buf = self.record_audio(last_chunk=chunk)
