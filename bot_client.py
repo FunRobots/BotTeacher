@@ -57,7 +57,7 @@ class APIAIBot:
             req = self._ai.text_request()
             req.lang = 'ru'
             req.session_id = self.session_id
-            req.query = msg if isinstance(msg, str) else str()
+            req.query = msg if isinstance(msg, str) else '.'
             response = json.loads(req.getresponse().read().decode('utf-8'))
             #print('api.ai response: ', response)
 
