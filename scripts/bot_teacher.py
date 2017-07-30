@@ -1,21 +1,23 @@
-from recorder import Recorder
-from recognizer import SpeechRecognizer
-from synthesizer import Talker
-from player import Player
+#!/usr/bin/env python3
+import rospy
+
+from bt_audio.recorder import Recorder
+from bt_audio.recognizer import SpeechRecognizer
+from bt_audio.synthesizer import Talker
+from bt_audio.player import Player
 import io
-from bot_client import APIAIBot
+from bt_apiai_service.bot_client import APIAIBot
 import json
 import time
-import audio_format_converter
+from bt_audio.utils import audio_format_converter
 import os
 
-from utils import ErrorLogger
+from bt_utils import ErrorLogger
 
 #read config
-config = json.load(open('config.conf','r'))
-yandex_voice_key = config['yandex_voice_key']
-apiai_bot_client_key = config['apiai_bot_client_key']
-pyaudio_config = config['pyaudio']
+yandex_voice_key = rospy.get_param('yandex_voice_key')
+apiai_bot_client_key = rospy.get_param('apiai_bot_client_key')
+pyaudio_config = json.loads(rospy.get_param('pyaudio'))
 
 #create objects
 rec = Recorder(pyaudio_config, min_rms=1000)
@@ -25,6 +27,9 @@ player = Player()
 bot = APIAIBot(client_key=apiai_bot_client_key)
 
 def recognize_speech():
+    if rospy.has_param('min_rms'):
+        rec.set_min_rms(min_rms = rospy.get_param('min_rms'))
+
     speech_audio = rec.listen_audio(timeout=91)
     if speech_audio is not None:
         speech_text = speech_recognizer.recognize_speech(audio_format_converter.raw_audio2wav(speech_audio, pyaudio_config))
@@ -50,7 +55,7 @@ log = None
 def welcome():
     global log
     global WELCOME_STATUS
-    
+
     print('listen...\n')
     speech_text = recognize_speech()
     bot_answer = bot.request(speech_text)
@@ -67,7 +72,7 @@ def welcome():
 ##            needs_detection()
         WELCOME_STATUS = True
         return True
-    
+
     else:
         print(BAD_SPEECH_RECOGNITION)
         say_text(BAD_SPEECH_RECOGNITION)
@@ -78,7 +83,7 @@ def welcome():
 def approach():
     global log
     global APPROACH_STATUS
-    
+
     #listen to consultor and notify the time
     speech_text = str()
     start = time.time()
@@ -87,7 +92,7 @@ def approach():
         speech_text = recognize_speech()
         if speech_text is not None and len(speech_text) > 0:
             break
-    
+
     pause = time.time() - start
 
     if pause < 30:
@@ -99,7 +104,7 @@ def approach():
         log.write('[{0}] \n Intent: {1} \n Consultant > {2} \n Client > {3}'.format(time.ctime(), bot_answer['intent_name'], speech_text, bot_answer['text']))
         APPROACH_STATUS = None
         return None
-    
+
     elif pause < 90:
         #approach
         bot_answer = bot.request(speech_text)
@@ -131,7 +136,7 @@ def approach():
 def needs_detection():
     global log
     global NEEDS_DETECTION_STATUS
-    
+
     print('listen...\n')
     speech_text = recognize_speech()
     bot_answer = bot.request(speech_text)
@@ -157,11 +162,11 @@ def needs_detection():
 def main():
     global log
     global STAT_FOLDER
-    
+
     if os.path.exists(STAT_FOLDER) is False:
         os.mkdir(STAT_FOLDER)
     log = open('stat/' + time.ctime() + '.log', 'w')
-    
+
     try:
         while WELCOME_STATUS is  False:
             welcome()
@@ -180,9 +185,10 @@ def main():
         speech_text = recognize_speech()
         if speech_text is not None and speech_text.strip().startswith('да'):
             main()
-           
+
     except Exception as e:
         ErrorLogger(__file__, e)
 
 if __name__ == '__main__':
+    rospy.init_node('bot_teacher')
     main()

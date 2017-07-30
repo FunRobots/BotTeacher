@@ -1,0 +1,8 @@
+<launch>
+  <!--Load softwate configuration -->
+	<include file="$(find bot_teacher)/run/software_config.launch" />
+
+  <node name="audio_min_volume_detector" pkg="candybot_v2" type="audio_min_volume_detector.py" output="screen"/>
+  <node name="bot_teacher" pkg="bot_teacher" type="bot_teacher.py" output="screen"/>
+
+</launch>

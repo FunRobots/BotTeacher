@@ -1,0 +1,13 @@
+<launch>
+	<param name="apiai_bot_client_key" value="227d01ab4f9242e8852b8ca2d185e552" />
+	<param name="yandex_voice_key" value="49d9bb75-7419-45cc-9988-76052abc6c44" />
+
+	<param name="pyaudio" value = '{
+		"format": 8,
+		"channels": 1,
+		"rate": 8000,
+		"frames_per_buffer": 1024,
+		"input_device": 10
+	}' />
+
+</launch>
