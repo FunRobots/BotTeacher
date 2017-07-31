@@ -13,7 +13,7 @@
                   "say_phrase": "continue",
                   "goto_next": "3-Needs-detection"
                 },
-                "-1": {"return": "Клиент ушёл!"}
+                "91": {"return": "Клиент ушёл!"}
           }
       }
   }
