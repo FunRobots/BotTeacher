@@ -44,10 +44,6 @@ def say_text(text: str):
 
 #bad speech recognition client phrase
 BAD_SPEECH_RECOGNITION = 'Повторите, пожалуйста, еще раз. Плохо слышно'
-WELCOME_STATUS = False
-APPROACH_STATUS = False
-NEEDS_DETECTION_STATUS = False
-
 STAT_FOLDER = 'stat'
 #----------------------------------------------------------------
 log = None
@@ -79,12 +75,18 @@ def main():
 
             wait_cases_dict = scheme['intents'][current_intent].get('wait_before_transition')
             if wait_cases_dict is not None:
-                wait_keys = [int(i) for i in wait_cases_dict.keys()].sort()
-                case_key_index = 1
-                while case_key_index < len(wait_keys) and pause < wait_keys[case_key_index + 1]:
-                    case_key += 1
+
+                wait_keys = [int(i) for i in wait_cases_dict.keys()]
+                wait_keys.sort(reverse=True)
+
+                print('wait_keys', wait_keys)
+
+                case_key_index = 0
+                while case_key_index < len(wait_keys) and pause < wait_keys[case_key_index]:
+                    case_key_index += 1
 
                 case = wait_cases_dict[str(wait_keys[case_key_index])]
+                print('case', case)
 
                 phrase_to_say = case.get('say_phrase')
                 if phrase_to_say is not None:
@@ -95,18 +97,27 @@ def main():
                 else:
                     bot_answer = bot.request(speech_text)
                     if isinstance(bot_answer, dict) and bot_answer.get('intent_name') == current_intent:
-                        bot_answer = bot.request('continue')
-                        if isinstance(bot_answer, dict):
-                            print('Client > ', bot_answer.get('text'))
-                            say_text(bot_answer.get('text'))
-                            log.write('[{0}] \n Intent: {1} \n Consultant > {2} \n Client > {3}'.format(time.ctime(), bot_answer['intent_name'], speech_text, bot_answer['text']))
-
-
-                current_intent = case.get('goto_next')
+                        print('Client > ', bot_answer.get('text'))
+                        say_text(bot_answer.get('text'))
+                        log.write('[{0}] \n Intent: {1} \n Consultant > {2} \n Client > {3}'.format(time.ctime(), bot_answer['intent_name'], speech_text, bot_answer['text']))
+                        current_intent = case.get('goto_next')
+                    else:
+                        print(BAD_SPEECH_RECOGNITION)
+                        say_text(BAD_SPEECH_RECOGNITION)
+                        continue
 
             else:
-                current_intent = scheme['intents'][current_intent].get('goto_next')
-
+                print(current_intent)
+                bot_answer = bot.request(speech_text)
+                if isinstance(bot_answer, dict) and bot_answer.get('intent_name') == current_intent:
+                    print('Client > ', bot_answer.get('text'))
+                    say_text(bot_answer.get('text'))
+                    log.write('[{0}] \n Intent: {1} \n Consultant > {2} \n Client > {3}'.format(time.ctime(), bot_answer['intent_name'], speech_text, bot_answer['text']))
+                    current_intent = scheme['intents'][current_intent].get('goto_next')
+                else:
+                    print(BAD_SPEECH_RECOGNITION)
+                    say_text(BAD_SPEECH_RECOGNITION)
+                    continue
 
         log.close()
         print('Repeat?')

@@ -1,29 +1,21 @@
 {
   "start": "1.Welcome",
-  "intents":[
-  {
+  "intents":{
       "1.Welcome": {
         "goto_next": "2-Approach"
       },
 
       "2-Approach": {
-          "wait_before_transition":[
-              {
-                "30": {"say_phrase": "goodbye"}
-              },
-              {
+          "wait_before_transition":{
+                "30": {"say_phrase": "goodbye"},
+
                 "90": {
                   "say_phrase": "continue",
                   "goto_next": "3-Needs-detection"
-                }
-              },
-              {
+                },
                 "-1": {"return": "Клиент ушёл!"}
-              }
-         ]
-
+          }
       }
   }
 
-  ]
 }
