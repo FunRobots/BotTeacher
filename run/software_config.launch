@@ -10,4 +10,5 @@
 		"input_device": 10
 	}' />
 
+<param name="scheme_file" value="bot_teacher.scs" />
 </launch>
