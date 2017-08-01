@@ -13,6 +13,7 @@ from bt_audio.utils import audio_format_converter
 import os
 from pathlib import Path
 from bt_utils import ErrorLogger
+from typing import List
 
 
 class SchemeProcessor:
@@ -21,34 +22,30 @@ class SchemeProcessor:
 
         #bad speech recognition client phrase
         self.BAD_SPEECH_RECOGNITION = 'Повторите, пожалуйста, еще раз. Плохо слышно'
-        self.STAT_FOLDER = 'stat'
-        if os.path.exists(self.STAT_FOLDER) is False:
-            os.mkdir(self.STAT_FOLDER)
-        self.log = open('stat/' + time.ctime() + '.log', 'w')
-
-        self.yandex_voice_key = yandex_voice_key
-        self.apiai_bot_client_key = apiai_bot_client_key
-        self.pyaudio_config = pyaudio_config
-
-        self.scheme = self._read_scheme_file(scheme_file)
-        self.current_intent = self.scheme.get('start')
-        #read config
-        yandex_voice_key = rospy.get_param('yandex_voice_key')
-        apiai_bot_client_key = rospy.get_param('apiai_bot_client_key')
-        pyaudio_config = json.loads(rospy.get_param('pyaudio'))
-
-        #create objects
-        self.rec = Recorder(pyaudio_config, min_rms=1000)
-        self.speech_recognizer = SpeechRecognizer(yandex_voice_key=yandex_voice_key)
-        self.talker = Talker(yandex_voice_key=yandex_voice_key)
-        self.player = Player()
-        self.bot = APIAIBot(client_key=apiai_bot_client_key)
 
         self.scheme_functions = {
             'goto_next': self._goto_next,
             'say_phrase': self._say_phrase,
             'wait_before_transition': self._wait_before_transition
         }
+
+        self.yandex_voice_key = yandex_voice_key
+        self.apiai_bot_client_key = apiai_bot_client_key
+        self.pyaudio_config = pyaudio_config
+
+        self.scheme = self._read_scheme_file(scheme_file)
+        self.current_intent_name = self.scheme.get('start')
+
+        #create objects
+        self.rec = Recorder(self.pyaudio_config, min_rms=1000)
+        self.speech_recognizer = SpeechRecognizer(yandex_voice_key=self.yandex_voice_key)
+        self.talker = Talker(yandex_voice_key=self.yandex_voice_key)
+        self.player = Player()
+        self.bot = APIAIBot(client_key=self.apiai_bot_client_key)
+
+        self.bot_answer_text = str()
+        self.pause = 0
+        self.do_bot_request_by_consultant_speech = True
 
     def _recognize_speech(self) -> str:
         if rospy.has_param('min_rms'):
@@ -67,24 +64,125 @@ class SchemeProcessor:
         player.play_audio(wav_source)
 
     def _read_scheme_file(self, scheme_file: str) -> dict:
-        pass
+        scheme_file = Path(__file__).resolve().parents[1].as_posix() + '/run/' + rospy.get_param('scheme_file')
+        return json.load(open(scheme_file,'r'))
 
     def _goto_next(self, intent_name: str) -> None:
-        pass
+        self.current_intent_name = intent_name
+        return None
 
-    def _say_phrase(self, phrase_to_say: str) -> None:
-        pass
+    def _say_phrase(self, phrase_to_say: str) -> List[str] or None:
+        self.do_bot_request_by_consultant_speech = False
 
-    def _wait_before_transition(self, variants_dict: dict) -> None:
-        pass
+        bot_answer = self.bot.request('phrase_to_say')
+        if isinstance(bot_answer, dict):
+            return [bot_answer.get('text')]
+        else:
+            return None
+
+    def _wait_before_transition(self, variants_dict: dict) -> List[str] or None:
+        self.do_bot_request_by_consultant_speech = False
+
+        wait_keys = [int(i) for i in variants_dict.keys()]
+        wait_keys.sort()
+
+        print('wait_keys', wait_keys)
+
+        case_key_index = 0
+        while case_key_index + 1 < len(wait_keys) and self.pause > wait_keys[case_key_index + 1]:
+            case_key_index += 1
+
+        case = wait_cases_dict[str(wait_keys[case_key_index])]
+        print('case', case)
+        bot_answer_texts_list = list()
+
+        #for each action name (each key of case dictionary)
+        for action_name in case.keys():
+            #try associate it with some function
+            func = self.scheme_functions.get(action_name)
+            #if function exists
+            if func is not None:
+                #call it with it parameters
+                func_bot_answer_texts_list = func(current_intent[action_name])
+                if isinstance(bot_answer_text, str):
+                    bot_answer_texts_list += func_bot_answer_texts_list
+        return bot_answer_texts_list
 
     def process(self):
 
+        self.STAT_FOLDER = 'stat'
+        if os.path.exists(self.STAT_FOLDER) is False:
+            os.mkdir(self.STAT_FOLDER)
+        self.log = open('stat/' + time.ctime() + '.log', 'w')
+
+        while self.current_intent_name is not None:
+            self.do_bot_request_by_consultant_speech = True
+
+            #listen to Consultant and notify time
+            speech_text = str()
+            start = time.time()
+            while time.time() - start < 90:
+                print('listen...\n')
+                speech_text = recognize_speech()
+                if speech_text is not None and len(speech_text) > 0:
+                    break
+
+            self.pause = time.time() - start
+            print('Consultant > ', speech_text)
+
+            self.log.write('\n\n [{0}] \n Intent: {1} \n Consultant > {2}'.format(time.ctime(), bot_answer['intent_name'], speech_text))
+
+            bot_answer = self.bot.request(speech_text)
+            #if intent is current intent
+            if isinstance(bot_answer, dict) and bot_answer.get('intent_name') == current_intent_name:
+                #do current intent functions
+                if current_intent_name in self.scheme['intents'].keys():
+                    #get current intent dictionary
+                    current_intent = self.scheme['intents'].get(current_intent_name)
+                    #for each action name (each key of current intent dictionary)
+                    for action_name in current_intent.keys():
+                        #try associate it with some function
+                        func = self.scheme_functions.get(action_name)
+                        #if function exists
+                        if func is not None:
+                            #call it with it parameters
+                            bot_answer_texts_list = func(current_intent[action_name])
+                            if isinstance(bot_answer_text, list):
+                                for bot_answer_text in bot_answer_texts_list:
+                                    print('Client > ', bot_answer_text)
+                                    say_text(bot_answer_text)
+                                    self.log.write('\n Client > {0}'.format(bot_answer_text))
+
+                    #if all functions allows request to bot do it
+                    if self.do_bot_request_by_consultant_speech is True:
+                        print('Client > ', bot_answer['text'])
+                        say_text(bot_answer['text'])
+                        self.log.write('\n Client > {0}'.format(bot_answer['text']))
+                else:
+                    self.current_intent_name = None
+            else:
+                print(self.BAD_SPEECH_RECOGNITION)
+                say_text(self.BAD_SPEECH_RECOGNITION)
+                continue
+
         self.log.close()
+
+        print('Повторить?')
+        self.say_text('Повторить?')
+        speech_text = self._recognize_speech()
+        if speech_text is not None and speech_text.strip().startswith('да'):
+            self.process()
 
 
 def main():
-    pass
+    #read config
+    yandex_voice_key = rospy.get_param('yandex_voice_key')
+    apiai_bot_client_key = rospy.get_param('apiai_bot_client_key')
+    pyaudio_config = json.loads(rospy.get_param('pyaudio'))
+    scheme = rospy.get_param('scheme_file')
+
+    scheme_processor = SchemeProcessor(yandex_voice_key=yandex_voice_key, apiai_bot_client_key=apiai_bot_client_key, pyaudio_config=pyaudio_config, scheme_file=scheme_file)
+    scheme_processor.process()
 
 
 if __name__ == '__main__':
