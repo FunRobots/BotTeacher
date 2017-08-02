@@ -46,7 +46,7 @@ class SchemeProcessor:
         self.bot_answer_text = str()
         self.pause = 0
         self.do_bot_request_by_consultant_speech = True
-        self.current_intent_changed = False
+        #self.current_intent_changed = False
 
     def _recognize_speech(self) -> str:
         if rospy.has_param('min_rms'):
@@ -70,7 +70,7 @@ class SchemeProcessor:
 
     def _goto_next(self, intent_name: str) -> None:
         self.current_intent_name = intent_name
-        self.current_intent_changed = True
+        #self.current_intent_changed = True
         return None
 
     def _say_phrase(self, phrase_to_say: str) -> List[str] or None:
@@ -89,26 +89,26 @@ class SchemeProcessor:
         wait_keys.sort()
 
         print('wait_keys', wait_keys)
+        print('pause', self.pause)
 
         case_key_index = 0
-        while case_key_index + 1 < len(wait_keys) and self.pause > wait_keys[case_key_index + 1]:
+        while case_key_index < len(wait_keys) and self.pause > wait_keys[case_key_index]:
+            print('|')
             case_key_index += 1
 
         case = variants_dict[str(wait_keys[case_key_index])]
         print('case', case)
-        bot_answer_texts_list = list()
+        self.current_intent_name = case.get('goto_next')
 
-        #for each action name (each key of case dictionary)
-        for action_name in case.keys():
-            #try associate it with some function
-            func = self.scheme_functions.get(action_name)
-            #if function exists
-            if func is not None:
-                #call it with it parameters
-                func_bot_answer_texts_list = func(case[action_name])
-                if isinstance(func_bot_answer_texts_list, list):
-                    bot_answer_texts_list += func_bot_answer_texts_list
-        return bot_answer_texts_list
+        phrase_to_say = case.get('say_phrase')
+        if phrase_to_say is not None:
+            bot_answer = self.bot.request(phrase_to_say)
+            if isinstance(bot_answer, dict):
+                return bot_answer.get('text')
+            else:
+                return None
+
+        return case.get('return')
 
     def process(self):
 
@@ -118,15 +118,11 @@ class SchemeProcessor:
         self.log = open('stat/' + time.ctime() + '.log', 'w')
 
         while self.current_intent_name is not None:
-            self.current_intent_changed = False
-
             print('intent:', self.current_intent_name)
-            self.do_bot_request_by_consultant_speech = True
-
             #listen to Consultant and notify time
             speech_text = str()
             start = time.time()
-            while time.time() - start < 90:
+            while time.time() - start < 100:
                 print('listen...\n')
                 speech_text = self._recognize_speech()
                 if speech_text is not None and len(speech_text) > 0:
@@ -134,40 +130,27 @@ class SchemeProcessor:
 
             self.pause = time.time() - start
             print('Consultant > ', speech_text)
-
             bot_answer = self.bot.request(speech_text)
-            self.log.write('\n\n [{0}] \n Intent: {1} \n Consultant > {2}'.format(time.ctime(), bot_answer['intent_name'], speech_text))
-
-            #if intent is current intent
             if isinstance(bot_answer, dict) and bot_answer.get('intent_name') == self.current_intent_name:
-                #do current intent functions
-                if self.current_intent_name in self.scheme['intents'].keys():
-                    #get current intent dictionary
-                    current_intent = self.scheme['intents'].get(self.current_intent_name)
-                    #for each action name (each key of current intent dictionary)
-                    for action_name in current_intent.keys():
-                        #try associate it with some function
-                        func = self.scheme_functions.get(action_name)
-                        #if function exists
-                        if func is not None:
-                            #call it with it parameters
-                            bot_answer_texts_list = func(current_intent[action_name])
-                            if isinstance(bot_answer_texts_list, list):
-                                for bot_answer_text in bot_answer_texts_list:
-                                    print('Client > ', bot_answer_text)
-                                    self._say_text(bot_answer_text)
-                                    self.log.write('\n Client > {0}'.format(bot_answer_text))
-
-                    #if all functions allows request to bot do it
-                    if self.do_bot_request_by_consultant_speech is True:
-                        print('Client > ', bot_answer['text'])
-                        self._say_text(bot_answer['text'])
-                        self.log.write('\n Client > {0}'.format(bot_answer['text']))
-
-                    if self.current_intent_changed is False:
-                        self.current_intent_name = None
+                current_intent = self.scheme['intents'].get(self.current_intent_name)
+                if isinstance(current_intent, dict):
+                    variants_dict = current_intent.get('wait_before_transition')
                 else:
-                    self.current_intent_name = None
+                    variants_dict = None
+                    current_intent = dict()
+
+                if variants_dict is not None:
+                    self.log.write('\n\n [{0}] \n Intent: {1} \n Consultant > {2}'.format(time.ctime(), self.current_intent_name, speech_text))
+                    bot_answer_text = self._wait_before_transition(variants_dict=variants_dict)
+                    print('Client > ', bot_answer_text)
+                    self._say_text(bot_answer_text)
+                    self.log.write('\n Client > {0}'.format(bot_answer_text))
+                else:
+                    print('Client > ', bot_answer.get('text'))
+                    self._say_text(bot_answer.get('text'))
+                    self.log.write('[{0}] \n Intent: {1} \n Consultant > {2} \n Client > {3}'.format(time.ctime(), self.current_intent_name, speech_text, bot_answer['text']))
+                    self.current_intent_name = current_intent.get('goto_next')
+
             else:
                 print(self.BAD_SPEECH_RECOGNITION)
                 self._say_text(self.BAD_SPEECH_RECOGNITION)
