@@ -1,0 +1,103 @@
+/// Template for bot dialog flow logic description 
+
+
+"start": {
+	"intent_name": "",
+	"intent_id": "",
+	"context": {}
+},
+"intent_list": [ 
+	{
+		"intent_name": "",
+		"intent_id": "",
+		"start_on_event": { 
+			"event_tuype": "complete_intent",
+			"event_description": "Complete Weclome intent"
+			},
+		"start_event_data": {
+				"event_options": [
+					{
+						"time_after_event": 0,
+						"duration": 60,
+						"goto_next": {
+							"intent_name": "",
+							"intent_id": "",
+						}
+					},
+					{
+						"time_after_event": 31,
+						"duration": 60,
+						"goto_next": {
+							"intent_name": "3-Needs-detection",
+							"intent_id": "",		// intent id is required ! 
+						}
+					},
+					{
+						"time_after_event": 91,
+						"duration": 60,
+						"goto_next": {
+							"intent_name": "",
+							"intent_id": "",
+						}
+					}
+				],
+		},
+		"action_on_complete": {
+			"action": "",
+			"action_name": "",
+			"action_type": ""
+			},
+		},
+	{
+		// other intent 
+	}
+
+	],
+"end": {
+	"intent_name": "",
+	"intent_id": "",
+	"context": {}
+},
+
+
+/// типы событий и опций для срабтывания следующего  интента
+"events": [
+	{
+		"event_type": "complete_intent",	// события связанные с окончание интентов 
+		"event_name": "",
+		"event_options": {
+			"time_after_event_options": [	// список временных интервалов после предыдущего интента 
+				{
+					"time_after_event": 0,
+					"duration": 60,
+					"goto_next": {
+						"intent_name": "",
+						"intent_id": "",
+					}
+				},
+				///...
+			],
+			"event_success": {				// флаг выполнения интента 
+				"value": "[True/False]",
+				"goto_next_true": {
+					"intent_name": "",
+					"intent_id": "",
+				},
+				"goto_next_false": {
+					"intent_name": "",
+					"intent_id": "",
+					}
+			},
+			"input_context_data": { 		// data in context of previous intent 
+				"var_name": "",
+				"var_type": "",
+				"value": ""
+			} 				
+		}
+	}
+]
+
+
+
+
+
